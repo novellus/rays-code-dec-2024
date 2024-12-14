@@ -110,8 +110,10 @@ with open('2nd order stats.csv', 'w', newline='') as csvfile:
 char_groups_fixed = defaultdict(lambda: defaultdict(int))  # { width : {'ab':1, 'cd':15, ...} }
 for width in range(1,10):
     i = 0
-    while i < len(rays_text):
-        char_groups_fixed[width][rays_text[i: i + width]] += 1
+    while i + width <= len(rays_text):
+        code = rays_text[i: i + width]
+        assert len(code) == width
+        char_groups_fixed[width][code] += 1
         i += width
 f = open('char_groups.txt', 'w')
 for width in range(1, max(char_groups_fixed)):
@@ -126,8 +128,10 @@ f.close()
 char_groups_sliding = defaultdict(lambda: defaultdict(int))  # { width : {'ab':1, 'cd':15, ...} }
 for width in range(1,20):
     i = 0
-    while i < len(rays_text):
-        char_groups_sliding[width][rays_text[i: i + width]] += 1
+    while i + width <= len(rays_text):
+        code = rays_text[i: i + width]
+        assert len(code) == width
+        char_groups_sliding[width][code] += 1
         i += 1
 f = open('char_groups_sliding.txt', 'w')
 for width in range(1, max(char_groups_sliding)):
@@ -170,7 +174,7 @@ f.close()
 
 
 # analysis of all possible multicharacter to space and "the" phonetic assignments
-# the (phonetically) = θi
+# the (phonetically) = ðə
 # possible_codes = []
 # for width in range(1,4):
 #     codes_at_width = char_groups_sliding[width].items()
@@ -184,7 +188,7 @@ f.close()
 #         if code_the != code_space:
 #             code_width_space = len(code_space)
 #             code_width_the = len(code_the)
-#             alphabet = {code_space: ' ', code_the: 'θi'}
+#             alphabet = {code_space: ' ', code_the: 'ðə'}
 #             translated_text, _, replacements_made = translate_multichar_sequences(alphabet, rays_text)
 #             words = translated_text.split(' ')
 #             word_lengths = [len(x) for x in words]
@@ -197,7 +201,7 @@ f.close()
 #             stats[stats_key]['ratio_space_code_replacements_to_text_len'] = len(code_space) * replacements_made[code_space] / len(rays_text)
 #             stats[stats_key]['ratio_the_code_replacements_to_text_len'] = len(code_the) * replacements_made[code_the] / len(rays_text)
 #             stats[stats_key]['avg_word_length'] = sum(word_lengths) / len(words)
-#             stats[stats_key]['number_of_"the "'] = translated_text.count('θi ')
+#             stats[stats_key]['number_of_"the "'] = translated_text.count('ðə ')
 
 # f = open('assignments to spaces and the.txt', 'w')
 # for code in possible_codes:  # maintain order  # TODO new iterates
@@ -209,7 +213,60 @@ f.close()
 
 
 # analysis2 of all possible multicharacter to space and "the" phonetic assignments
-max_seq_length = 2
+max_seq_length = 1
+target_seq = ['ð', 'ə', ' ']  # "the "
+secret_target_seq = [' ', 'ð', 'ə', ' ']  # " the "
+
+possible_code_lengths = list(itertools.product(range(1, max_seq_length + 1), repeat = len(target_seq)))
+possible_alphabets = []
+for code_lens in possible_code_lengths:
+    total_seq_len = sum(code_lens)
+    seqs_at_width = char_groups_sliding[total_seq_len].items()
+    seqs_at_width = sorted(seqs_at_width, key=lambda x: (-x[1], x[0]))  # order by length and then frequency in Ray's text
+    seqs_at_width = [x[0] for x in seqs_at_width]
+
+    for total_seq in seqs_at_width:
+        alphabet = {}
+        i_subseq = 0
+        for i_target, target_char in enumerate(target_seq):
+            target_code_len = code_lens[i_target]
+            code = total_seq[i_subseq: i_subseq + target_code_len]
+            if code in alphabet: break  
+            alphabet[code] = target_char
+            i_subseq += target_code_len
+
+            # print('--C--', target_char, target_code_len, i_subseq, target_seq, alphabet)
+            # if len(possible_alphabets) > 204: break
+
+        # discard sequences which result in duplicate codes
+        if len(alphabet) == len(target_seq):
+            print('--D--', f'{repr(total_seq)}', alphabet)
+            possible_alphabets.append(alphabet)
+sys.exit()
+stats = defaultdict(dict)  # {serialized alphabet: {key: value}}
+for i_alphabet, alphabet in enumerate(possible_alphabets):
+    print('--B--', i_alphabet, alphabet)
+    reverse_alphabet = {b:a for a,b in alphabet.items()}
+    code_width_space = len(reverse_alphabet[' '])
+    translated_text, _, replacements_made = translate_multichar_sequences(alphabet, rays_text)
+    words = translated_text.split(' ')
+    word_lengths = [len(x) for x in words]
+
+    stats_key = frozenset(sorted(alphabet.items(), key=lambda x: x[1]))
+    stats[stats_key]['num_words'] = len(words)
+    stats[stats_key]['num_spaces'] = replacements_made[reverse_alphabet[' ']]
+    stats[stats_key]['ratio_space_replacements_to_text_len'] = code_width_space * replacements_made[reverse_alphabet[' ']] / len(rays_text)
+    stats[stats_key]['avg_word_length'] = sum(word_lengths) / len(words)
+    stats[stats_key]['norm_avg_word_length'] = stats[stats_key]['avg_word_length'] / code_width
+    stats[stats_key][f'num_target_seq "{"".join(target_seq)}"'] = rays_text.count(''.join(target_seq))
+    stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] = rays_text.count(''.join(secret_target_seq))
+
+f = open('assignments to spaces and the.txt', 'w')
+for alphabet in possible_alphabets:  # maintain order
+    f.write(f"alphabet '{alphabet}'\n")
+    pprint(stats[frozenset(sorted(alphabet.items(), key=lambda: x[1]))], stream=f)
+    f.write(f"\n\n\n")
+f.close()
 
 
 
