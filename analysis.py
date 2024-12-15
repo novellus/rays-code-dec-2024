@@ -215,7 +215,7 @@ f.close()
 
 
 # analysis2 of all possible multicharacter to space and "the" phonetic assignments
-max_seq_length = 1
+max_seq_length = 3
 target_seq = ['ð', 'ə', ' ']  # "the "
 secret_target_seq = [' ', 'ð', 'ə', ' ']  # " the "
 
