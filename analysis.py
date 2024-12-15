@@ -270,7 +270,7 @@ for alphabet in possible_alphabets:  # maintain order
     f.write(f"\n\n\n")
 f.close()
 
-f = open('secret limited assignments to spaces and the.txt', 'w')  # print in order of num_secret_target_seq
+f = open('secret limited assignments to spaces and the.txt', 'w')  # TODO print in order of num_secret_target_seq
 for alphabet in possible_alphabets:  # maintain order
     stats_key = frozenset(sorted(alphabet.items(), key=lambda x: x[1]))
     if stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] > 0:
