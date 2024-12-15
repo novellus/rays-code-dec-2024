@@ -148,6 +148,8 @@ for width in range(1,4):
     codes_at_width = char_groups_sliding[width].items()
     codes_at_width = sorted(codes_at_width, key=lambda x: (-x[1], x[0]))  # order by length and then frequency in Ray's text
     codes_at_width = [x[0] for x in codes_at_width]
+    for code in codes_at_width:
+        assert len(code) == width, f'code has incorrect width!:, "{code}" is not {width} width'
     possible_codes += codes_at_width
 
 stats = defaultdict(dict)  # {width: {key: value}}
@@ -240,12 +242,10 @@ for code_lens in possible_code_lengths:
 
         # discard sequences which result in duplicate codes
         if len(alphabet) == len(target_seq):
-            print('--D--', f'{repr(total_seq)}', alphabet)
             possible_alphabets.append(alphabet)
-sys.exit()
+
 stats = defaultdict(dict)  # {serialized alphabet: {key: value}}
 for i_alphabet, alphabet in enumerate(possible_alphabets):
-    print('--B--', i_alphabet, alphabet)
     reverse_alphabet = {b:a for a,b in alphabet.items()}
     code_width_space = len(reverse_alphabet[' '])
     translated_text, _, replacements_made = translate_multichar_sequences(alphabet, rays_text)
@@ -258,14 +258,25 @@ for i_alphabet, alphabet in enumerate(possible_alphabets):
     stats[stats_key]['ratio_space_replacements_to_text_len'] = code_width_space * replacements_made[reverse_alphabet[' ']] / len(rays_text)
     stats[stats_key]['avg_word_length'] = sum(word_lengths) / len(words)
     stats[stats_key]['norm_avg_word_length'] = stats[stats_key]['avg_word_length'] / code_width
-    stats[stats_key][f'num_target_seq "{"".join(target_seq)}"'] = rays_text.count(''.join(target_seq))
-    stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] = rays_text.count(''.join(secret_target_seq))
+    stats[stats_key][f'num_target_seq "{"".join(target_seq)}"'] = translated_text.count(''.join(target_seq))
+    stats[stats_key][f'ratio target_seq "{"".join(target_seq)}" to whole text'] = sum([len(reverse_alphabet[char]) for char in target_seq]) * translated_text.count(''.join(target_seq)) / len(rays_text)
+    stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] = translated_text.count(''.join(secret_target_seq))
+    stats[stats_key][f'ratio secret_target_seq "{"".join(secret_target_seq)}" to whole text'] = sum([len(reverse_alphabet[char]) for char in secret_target_seq]) * translated_text.count(''.join(secret_target_seq)) / len(rays_text)
 
 f = open('assignments to spaces and the.txt', 'w')
 for alphabet in possible_alphabets:  # maintain order
     f.write(f"alphabet '{alphabet}'\n")
-    pprint(stats[frozenset(sorted(alphabet.items(), key=lambda: x[1]))], stream=f)
+    pprint(stats[frozenset(sorted(alphabet.items(), key=lambda x: x[1]))], stream=f)
     f.write(f"\n\n\n")
+f.close()
+
+f = open('secret limited assignments to spaces and the.txt', 'w')  # print in order of num_secret_target_seq
+for alphabet in possible_alphabets:  # maintain order
+    stats_key = frozenset(sorted(alphabet.items(), key=lambda x: x[1]))
+    if stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] > 0:
+        f.write(f"alphabet '{alphabet}'\n")
+        pprint(stats[stats_key], stream=f)
+        f.write(f"\n\n\n")
 f.close()
 
 

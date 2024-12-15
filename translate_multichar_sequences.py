@@ -10,6 +10,10 @@ def translate_multichar_sequences(alphabet, input_text):
     # }
     # input_text = str
 
+    # verify alhpabet
+    for k in alphabet:
+        assert k, f'alphabet cannot contain an empty string:, "{k}"->"{alphabet[k]}", {alphabet}'
+
     # stabilize alphabet order to guarantee output order in case one key is a substring of another
     alphabet_stable_order = sorted(alphabet, key=lambda x: (len(x), x))
 
