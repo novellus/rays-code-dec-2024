@@ -21,6 +21,20 @@ f.close()
 
 
 
+# alphanumeric and phoneme lists
+lower_letters = 'abcdefghijklmnopqrstuvwxyz'
+upper_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+numbers = '0123456789'
+punctuation = '.,"-?:!;' + "'"
+white_space = ' '
+target_alpha_chars = lower_letters + upper_letters + numbers + punctuation + ' '
+
+# TODO P and L should be lowercase, but I wanted to make sure none of the phonemes appeared in the input text for intermediary analysis completeness sake
+phonetic_consonants = ['m', 'n', 'ŋ', 'P', 't', 'tʃ', 'k', 'b', 'd', 'dʒ', 'ɡ', 'f', 'θ', 's', 'ʃ', 'x', 'h', 'v', 'ð', 'z', 'ʒ', 'w', 'L', 'r', 'j', 'w']
+phonetic_vowels = ['æ', 'ɑ', 'ɪ', 'ɛ', 'ʌ', 'ʊ', 'eɪ', 'oʊ', 'i', 'u', 'aɪ', 'ɔɪ', 'aʊ', 'ɜr', 'ɑr', 'ɔr', 'ɪr', 'ɛr', 'ʊr', 'ə', 'ər']  # GA
+
+
+
 # first order statistics
 char_distribution = defaultdict(int)
 for char in rays_text:
@@ -215,9 +229,17 @@ f.close()
 
 
 # analysis2 of all possible multicharacter to space and "the" phonetic assignments
-max_seq_length = 3
+max_seq_length = 3  # TODO update to 3?
 target_seq = ['ð', 'ə', ' ']  # "the "
 secret_target_seq = [' ', 'ð', 'ə', ' ']  # " the "
+do_not_double = phonetic_consonants + phonetic_vowels
+
+def unacceptable_repitition(s):
+    for c in do_not_double:
+        unacceptable_substring = c+c
+        if unacceptable_substring in s:
+            return (True, c)
+    return False
 
 possible_code_lengths = list(itertools.product(range(1, max_seq_length + 1), repeat = len(target_seq)))
 possible_alphabets = []
@@ -258,6 +280,8 @@ for i_alphabet, alphabet in enumerate(possible_alphabets):
     stats[stats_key]['ratio_space_replacements_to_text_len'] = code_width_space * replacements_made[reverse_alphabet[' ']] / len(rays_text)
     stats[stats_key]['avg_word_length'] = sum(word_lengths) / len(words)
     stats[stats_key]['norm_avg_word_length'] = stats[stats_key]['avg_word_length'] / code_width
+    stats[stats_key]['translated_text'] = translated_text
+    stats[stats_key]['_unacceptable_repitition'] = unacceptable_repitition(translated_text)
     stats[stats_key][f'num_target_seq "{"".join(target_seq)}"'] = translated_text.count(''.join(target_seq))
     stats[stats_key][f'ratio target_seq "{"".join(target_seq)}" to whole text'] = sum([len(reverse_alphabet[char]) for char in target_seq]) * translated_text.count(''.join(target_seq)) / len(rays_text)
     stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] = translated_text.count(''.join(secret_target_seq))
@@ -273,7 +297,8 @@ f.close()
 f = open('secret limited assignments to spaces and the.txt', 'w')  # TODO print in order of num_secret_target_seq
 for alphabet in possible_alphabets:  # maintain order
     stats_key = frozenset(sorted(alphabet.items(), key=lambda x: x[1]))
-    if stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] > 0:
+    if stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] > 0 \
+       and not stats[stats_key]['_unacceptable_repitition']:
         f.write(f"alphabet '{alphabet}'\n")
         pprint(stats[stats_key], stream=f)
         f.write(f"\n\n\n")
@@ -281,16 +306,7 @@ f.close()
 
 
 
-# systematically analyzing all possible multicharacter alphabetic translations
-lower_letters = 'abcdefghijklmnopqrstuvwxyz'
-upper_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-numbers = '0123456789'
-punctuation = '.,"-?:!;' + "'"
-white_space = ' '
-target_alpha_chars = lower_letters + upper_letters + numbers + punctuation + ' '
-
-phonetic_consonants = ['m', 'n', 'ŋ', 'p', 't', 'tʃ', 'k', 'b', 'd', 'dʒ', 'ɡ', 'f', 'θ', 's', 'ʃ', 'x', 'h', 'v', 'ð', 'z', 'ʒ', 'w', 'l', 'r', 'j', 'w']
-phonetic_vowels = ['æ', 'ɑ', 'ɪ', 'ɛ', 'ʌ', 'ʊ', 'eɪ', 'oʊ', 'i', 'u', 'aɪ', 'ɔɪ', 'aʊ', 'ɜr', 'ɑr', 'ɔr', 'ɪr', 'ɛr', 'ʊr', 'ə', 'ər']  # GA
+# alphanumeric and phoneme lists
 
 
 # multicharacter alphabetic translation
