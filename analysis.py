@@ -234,11 +234,20 @@ target_seq = ['ð', 'ə', ' ']  # "the "
 secret_target_seq = [' ', 'ð', 'ə', ' ']  # " the "
 do_not_double = phonetic_consonants + phonetic_vowels
 
+# alphabet_assumptions = {'||': '.'}
+# minimum_number_of_tokens = int(math.ceil(len(rays_text) / max_seq_length))
+
 def unacceptable_repitition(s):
     for c in do_not_double:
         unacceptable_substring = c+c
         if unacceptable_substring in s:
-            return (True, c)
+            return (True, unacceptable_substring)
+    return False
+
+def unacceptable_substring(s):
+    for unacceptable_substring in [' ð ', '   ',]:
+        if unacceptable_substring in s:
+            return (True, unacceptable_substring)
     return False
 
 possible_code_lengths = list(itertools.product(range(1, max_seq_length + 1), repeat = len(target_seq)))
@@ -258,9 +267,6 @@ for code_lens in possible_code_lengths:
             if code in alphabet: break  
             alphabet[code] = target_char
             i_subseq += target_code_len
-
-            # print('--C--', target_char, target_code_len, i_subseq, target_seq, alphabet)
-            # if len(possible_alphabets) > 204: break
 
         # discard sequences which result in duplicate codes
         if len(alphabet) == len(target_seq):
@@ -282,6 +288,7 @@ for i_alphabet, alphabet in enumerate(possible_alphabets):
     stats[stats_key]['norm_avg_word_length'] = stats[stats_key]['avg_word_length'] / code_width
     stats[stats_key]['translated_text'] = translated_text
     stats[stats_key]['_unacceptable_repitition'] = unacceptable_repitition(translated_text)
+    stats[stats_key]['_unacceptable_substring'] = unacceptable_substring(translated_text)
     stats[stats_key][f'num_target_seq "{"".join(target_seq)}"'] = translated_text.count(''.join(target_seq))
     stats[stats_key][f'ratio target_seq "{"".join(target_seq)}" to whole text'] = sum([len(reverse_alphabet[char]) for char in target_seq]) * translated_text.count(''.join(target_seq)) / len(rays_text)
     stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] = translated_text.count(''.join(secret_target_seq))
@@ -298,7 +305,8 @@ f = open('secret limited assignments to spaces and the.txt', 'w')  # TODO print 
 for alphabet in possible_alphabets:  # maintain order
     stats_key = frozenset(sorted(alphabet.items(), key=lambda x: x[1]))
     if stats[stats_key][f'num_secret_target_seq "{"".join(secret_target_seq)}"'] > 0 \
-       and not stats[stats_key]['_unacceptable_repitition']:
+       and not stats[stats_key]['_unacceptable_repitition'] \
+       and not stats[stats_key]['_unacceptable_substring']:
         f.write(f"alphabet '{alphabet}'\n")
         pprint(stats[stats_key], stream=f)
         f.write(f"\n\n\n")
