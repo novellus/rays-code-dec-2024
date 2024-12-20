@@ -32,6 +32,7 @@ target_alpha_chars = lower_letters + upper_letters + numbers + punctuation + ' '
 # TODO P and L should be lowercase, but I wanted to make sure none of the phonemes appeared in the input text for intermediary analysis completeness sake
 phonetic_consonants = ['m', 'n', 'ŋ', 'P', 't', 'tʃ', 'k', 'b', 'd', 'dʒ', 'ɡ', 'f', 'θ', 's', 'ʃ', 'x', 'h', 'v', 'ð', 'z', 'ʒ', 'w', 'L', 'r', 'j', 'w']
 phonetic_vowels = ['æ', 'ɑ', 'ɪ', 'ɛ', 'ʌ', 'ʊ', 'eɪ', 'oʊ', 'i', 'u', 'aɪ', 'ɔɪ', 'aʊ', 'ɜr', 'ɑr', 'ɔr', 'ɪr', 'ɛr', 'ʊr', 'ə', 'ər']  # GA
+phonemes = phonetic_consonants + phonetic_vowels
 
 
 
@@ -232,13 +233,13 @@ f.close()
 max_seq_length = 3  # TODO update to 3?
 target_seq = ['ð', 'ə', ' ']  # "the "
 secret_target_seq = [' ', 'ð', 'ə', ' ']  # " the "
-do_not_double = phonetic_consonants + phonetic_vowels
 
-# alphabet_assumptions = {'||': '.'}
+# alphabet_assumptions = {}
+alphabet_assumptions = {' ': '', '\n': '\n'}
 # minimum_number_of_tokens = int(math.ceil(len(rays_text) / max_seq_length))
 
 def unacceptable_repitition(s):
-    for c in do_not_double:
+    for c in phonemes:
         unacceptable_substring = c+c
         if unacceptable_substring in s:
             return (True, unacceptable_substring)
@@ -259,7 +260,7 @@ for code_lens in possible_code_lengths:
     seqs_at_width = [x[0] for x in seqs_at_width]
 
     for total_seq in seqs_at_width:
-        alphabet = {}
+        alphabet = {a:alphabet_assumptions[a] for a in alphabet_assumptions}
         i_subseq = 0
         for i_target, target_char in enumerate(target_seq):
             target_code_len = code_lens[i_target]
@@ -269,7 +270,7 @@ for code_lens in possible_code_lengths:
             i_subseq += target_code_len
 
         # discard sequences which result in duplicate codes
-        if len(alphabet) == len(target_seq):
+        if len(alphabet) == (len(alphabet_assumptions) + len(target_seq)):
             possible_alphabets.append(alphabet)
 
 stats = defaultdict(dict)  # {serialized alphabet: {key: value}}
